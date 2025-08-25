@@ -33,24 +33,37 @@ export default function handler(req, res) {
       return res.status(400).json({ error: "Photo file missing" });
     }
 
+    // Handle formidable v2+ file structure
+    let photoFile;
+    if (Array.isArray(files.photo)) photoFile = files.photo[0];
+    else photoFile = files.photo;
+
     try {
       const formData = new FormData();
       formData.append("chat_id", CHAT_ID);
       formData.append("caption", fields.message || "");
-      formData.append("photo", fs.createReadStream(files.photo.filepath));
+      formData.append(
+        "photo",
+        fs.createReadStream(photoFile.filepath),
+        photoFile.originalFilename
+      );
 
       const resp = await fetch(
         `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`,
-        { method: "POST", body: formData }
+        {
+          method: "POST",
+          body: formData,
+          headers: formData.getHeaders(),
+        }
       );
 
       const data = await resp.json();
       if (!data.ok) throw new Error(data.description);
 
-      res.status(200).json({ success: true, data });
+      return res.status(200).json({ success: true, data });
     } catch (e) {
       console.error("Telegram send error:", e);
-      res.status(500).json({ error: e.message });
+      return res.status(500).json({ error: e.message });
     }
   });
 }
