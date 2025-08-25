@@ -1,4 +1,6 @@
 import formidable from "formidable";
+import fs from "fs";
+import FormData from "form-data";
 
 export const config = {
   api: {
@@ -24,11 +26,9 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Missing Telegram credentials" });
   }
 
-  // Check Content-Type
   const contentType = req.headers["content-type"] || "";
 
   if (contentType.includes("multipart/form-data")) {
-    // Parse FormData
     const form = new formidable.IncomingForm();
 
     form.parse(req, async (err, fields, files) => {
@@ -64,7 +64,6 @@ export default async function handler(req, res) {
       }
     });
   } else if (contentType.includes("application/json")) {
-    // JSON body case
     const { message } = await new Promise((resolve, reject) => {
       let body = "";
       req.on("data", (chunk) => (body += chunk));
