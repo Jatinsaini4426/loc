@@ -1,5 +1,6 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -8,14 +9,21 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Message is required" });
   }
 
+  const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+  const CHAT_ID = process.env.CHAT_ID;
+
+  if (!TELEGRAM_TOKEN || !CHAT_ID) {
+    return res.status(500).json({ error: "Missing Telegram credentials" });
+  }
+
   try {
     const resp = await fetch(
-      `https://api.telegram.org/bot6235375573:AAHdripMzwMYFL0dhruXGyvmJ6ZSQhWCTn4/sendMessage`,
+      `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          chat_id: 1444862345,
+          chat_id: CHAT_ID,
           text: message,
         }),
       }
@@ -24,7 +32,7 @@ export default async function handler(req, res) {
     const data = await resp.json();
     if (!data.ok) throw new Error(data.description);
 
-    return res.status(200).json({ success: true, data });
+    return res.status(200).json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
