@@ -14,7 +14,7 @@ export default async function handler(req, res) {
         .status(405)
         .json({ error: "Method Not Allowed. POST required." });
     }
-
+ 
     // Check API key in header
     const apiKey = req.headers["x-api-key"];
     if (!apiKey || apiKey !== API_KEY) {
