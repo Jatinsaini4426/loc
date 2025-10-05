@@ -59,7 +59,7 @@ export default async function handler(req, res) {
         <p><b>Message:</b></p>
         <div style="margin-left:15px">${message.replace(/\n/g, "<br>")}</div>
       `,
-    };
+    }; 
 
     // Send the email
     await transporter.sendMail(mailOptions);
