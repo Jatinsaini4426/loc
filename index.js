@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // ✅ Global middlewares
-app.use(cors()); // enable CORS for all APIs
+// app.use(cors()); 
 app.use(express.json()); // parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded bodies
 
