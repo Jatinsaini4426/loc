@@ -1,17 +1,20 @@
-export default async function handler(req, res) {
+import express from "express";
+import fetch from "node-fetch";
+
+const router = express.Router();
+
+router.use(express.json());
+
+// Allow CORS for all routes
+router.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  next();
+});
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json(false);
-  }
-
+router.post("/", async (req, res) => {
   const body = req.body;
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
   const CHAT_ID = process.env.CHAT_ID;
@@ -71,6 +74,9 @@ ${body.userAgent}`;
 
     return res.status(200).json(true);
   } catch (err) {
+    console.error("Telegram API error:", err.message);
     return res.status(500).json(false);
   }
-}
+});
+
+export default router;

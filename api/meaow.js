@@ -1,3 +1,4 @@
+import express from "express";
 import { IncomingForm } from "formidable";
 import fs from "fs";
 import FormData from "form-data";
@@ -5,10 +6,15 @@ import axios from "axios";
 import os from "os";
 import path from "path";
 
-export const config = { api: { bodyParser: false } };
-export const runtime = "nodejs";
+const router = express.Router();
 
-export default async function handler(req, res) {
+// Disable Express default body parser for this route
+router.use((req, res, next) => {
+  // Because Formidable handles multipart/form-data parsing
+  next();
+});
+
+router.post("/", async (req, res) => {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
   const CHAT_ID = process.env.CHAT_ID;
 
@@ -17,7 +23,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1️⃣ Parse form
+    // 1️⃣ Parse incoming form data
     let files;
     try {
       const form = new IncomingForm({
@@ -78,13 +84,14 @@ export default async function handler(req, res) {
         "Telegram API error:",
         telegramErr?.response?.data || telegramErr.message
       );
-      return res
-        .status(500)
-        .json({ error: telegramErr?.response?.data || "Telegram API failed" });
+      return res.status(500).json({
+        error: telegramErr?.response?.data || "Telegram API failed",
+      });
     }
   } catch (err) {
-    // 4️⃣ Catch any uncaught error
     console.error("Unexpected error:", err.message);
     return res.status(500).json({ error: "Unexpected server error" });
   }
-}
+});
+
+export default router;
