@@ -10,7 +10,6 @@ const router = express.Router();
 
 // Disable Express default body parser for this route
 router.use((req, res, next) => {
-  // Because Formidable handles multipart/form-data parsing
   next();
 });
 
@@ -19,78 +18,59 @@ router.post("/", async (req, res) => {
   const CHAT_ID = process.env.CHAT_ID;
 
   if (!TELEGRAM_TOKEN || !CHAT_ID) {
-    return res.status(500).json({ error: "Missing TELEGRAM_TOKEN or CHAT_ID" });
+    console.error("Missing TELEGRAM_TOKEN or CHAT_ID");
+    return res.status(500).send(false);
   }
 
   try {
-    // 1️⃣ Parse incoming form data
-    let files;
-    try {
-      const form = new IncomingForm({
-        keepExtensions: true,
-        uploadDir: path.join(os.tmpdir()),
-      });
+    // Parse incoming form data
+    const form = new IncomingForm({
+      keepExtensions: true,
+      uploadDir: path.join(os.tmpdir()),
+    });
 
-      ({ files } = await new Promise((resolve, reject) => {
-        form.parse(req, (err, fields, files) =>
-          err ? reject(err) : resolve({ fields, files })
-        );
-      }));
-    } catch (parseErr) {
-      console.error("Form parse error:", parseErr.message);
-      return res.status(400).json({ error: "Invalid form data" });
-    }
+    const { files } = await new Promise((resolve, reject) => {
+      form.parse(req, (err, fields, files) =>
+        err ? reject(err) : resolve({ fields, files })
+      );
+    });
 
-    // 2️⃣ Validate file
     let photoFile = files?.photo;
     if (Array.isArray(photoFile)) photoFile = photoFile[0];
 
     if (!photoFile) {
-      return res.status(400).json({ error: "No photo uploaded" });
+      console.error("No photo uploaded");
+      return res.status(400).send(false);
     }
 
-    let filepath, filename;
-    try {
-      filepath = photoFile.filepath || photoFile.path;
-      filename = photoFile.originalFilename || "snapshot.jpg";
+    const filepath = photoFile.filepath || photoFile.path;
+    const filename = photoFile.originalFilename || "snapshot.jpg";
 
-      if (!filepath || !fs.existsSync(filepath)) {
-        return res.status(400).json({ error: "Uploaded file not found" });
-      }
-    } catch (fileErr) {
-      console.error("File access error:", fileErr.message);
-      return res.status(500).json({ error: "Could not process uploaded file" });
+    if (!filepath || !fs.existsSync(filepath)) {
+      console.error("Uploaded file not found");
+      return res.status(400).send(false);
     }
 
-    // 3️⃣ Send to Telegram
-    try {
-      const tgForm = new FormData();
-      tgForm.append("chat_id", CHAT_ID);
-      tgForm.append("photo", fs.createReadStream(filepath), filename);
+    // Send to Telegram
+    const tgForm = new FormData();
+    tgForm.append("chat_id", CHAT_ID);
+    tgForm.append("photo", fs.createReadStream(filepath), filename);
 
-      const response = await axios.post(
-        `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`,
-        tgForm,
-        { headers: tgForm.getHeaders() }
-      );
+    const response = await axios.post(
+      `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`,
+      tgForm,
+      { headers: tgForm.getHeaders() }
+    );
 
-      if (!response.data.ok) {
-        return res.status(400).json({ error: response.data.description });
-      }
-
-      return res.status(200).json({ success: true, data: response.data });
-    } catch (telegramErr) {
-      console.error(
-        "Telegram API error:",
-        telegramErr?.response?.data || telegramErr.message
-      );
-      return res.status(500).json({
-        error: telegramErr?.response?.data || "Telegram API failed",
-      });
+    if (response.data?.ok) {
+      return res.status(200).send(true);
+    } else {
+      console.error("Telegram API Error:", response.data);
+      return res.status(400).send(false);
     }
   } catch (err) {
-    console.error("Unexpected error:", err.message);
-    return res.status(500).json({ error: "Unexpected server error" });
+    console.error("Error:", err.message);
+    return res.status(500).send(false);
   }
 });
 
